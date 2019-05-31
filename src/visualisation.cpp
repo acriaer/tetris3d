@@ -85,7 +85,7 @@ bool Visualisation::Render(float running_time)
     glm::mat4 projection =
         glm::perspective(glm::radians(fov_), float(rx_) / float(ry_), 0.1f, 10000.0f);
 
-    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 0, -2.0f));
 
     glm::mat4 view = UpdateCamera(running_time);
 
@@ -179,11 +179,15 @@ boost::optional<Visualisation::Action> Visualisation::DequeueAction()
     return ret;
 }
 
-template <int W, int H>
-Visualisation::Object::Object(Geometry<W, H> &geometry, Visualisation &vis)
-    : visible_(false), pos_()
+Visualisation::Object *Visualisation::CreateObject()
 {
-    vis.objects_.push_back(this);
+    auto ret = new Object(*this);
+    objects_.push_back(ret);
+    return ret;
+}
+
+template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry)
+{
 
     std::vector<Vertex> vertices;
     std::vector<glm::u32> indices;
@@ -246,6 +250,8 @@ Visualisation::Object::Object(Geometry<W, H> &geometry, Visualisation &vis)
     indices_count_ = indices.size();
 }
 
+Visualisation::Object::Object(Visualisation &vis) : vis_(vis), visible_(false), pos_() {}
+
 void Visualisation::Object::SetVisibility(bool v) { visible_ = v; }
 
 void Visualisation::Object::Render()
@@ -276,7 +282,7 @@ void Visualisation::Object::Render()
 
 // Explicitly instantiate Object ctor to avoid stuffing this logic into header
 // file.
-template Visualisation::Object::Object(Geometry<BOARD_SIZE, BOARD_SIZE> &geometry,
-                                       Visualisation &vis);
-template Visualisation::Object::Object(Geometry<BLOCK_SIZE, BLOCK_SIZE> &geometry,
-                                       Visualisation &vis);
+template void
+Visualisation::Object::LoadGeometry(Geometry<BOARD_SIZE, BOARD_SIZE> &geometry);
+template void
+Visualisation::Object::LoadGeometry(Geometry<BLOCK_SIZE, BLOCK_SIZE> &geometry);

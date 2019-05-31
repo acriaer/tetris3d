@@ -58,6 +58,7 @@ ShapeToGeometry(const std::array<uint8_t, BLOCK_SIZE * BLOCK_SIZE> &shape)
 Gameplay::Gameplay(Visualisation &vis) : vis_(vis)
 {
     auto geometry = ShapeToGeometry(tetris_shapes[0]);
-    auto obj = new Visualisation::Object(geometry, vis);
+    auto obj = vis.CreateObject();
+    obj->LoadGeometry(geometry);
     obj->SetVisibility(true);
 }

@@ -36,8 +36,8 @@ class Visualisation
     class Object
     {
       public:
-        // Visualisation class handles the object desctruction
-        template <int W, int H> Object(Geometry<W, H> &geometry, Visualisation &vis);
+        Object(Visualisation &vis);
+        template <int W, int H> void LoadGeometry(Geometry<W, H> &geometry);
 
         void SetVisibility(bool visible);
         void SetPostion(glm::vec3 position);
@@ -45,6 +45,7 @@ class Visualisation
 
       private:
         ~Object() = default; // FIXME!
+        Visualisation &vis_;
 
         GLuint vertex_buffer_;
         GLuint index_buffer_;
@@ -78,6 +79,7 @@ class Visualisation
     Visualisation();
     ~Visualisation() = default; // FIXME!
 
+    Object *CreateObject(); // Visualisation class handles the object desctruction
     bool Render(float running_time);
 
     Log log_{"Visualisation"};
