@@ -7,5 +7,10 @@ uniform sampler2D sampler;
 
 void main()
 {
-	color = texture(sampler, UV).rgb;
+	float color_val = 1;
+
+	if (bool(int(int(UV.x * 100) % 10 < 5) ^ int(int(UV.y * 100) % 10 < 5)))
+		color_val = 0;
+
+	color = vec3(color_val, color_val, color_val);
 }

@@ -20,7 +20,6 @@ float Trajectory::GetPoint(float x)
         return y0_;
 
     float mx = (x - x0_) / (x1_ - x0_) * (tanh_x_high - tanh_x_low) + tanh_x_low;
-    Log("T").Info() << "mx: " << mx;
 
     return (glm::tanh(mx) + 1.0f) / 2.0f * (y1_ - y0_) + y0_;
 }

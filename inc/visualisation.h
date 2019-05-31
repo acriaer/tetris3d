@@ -22,6 +22,10 @@ class Visualisation
         Exit
     };
 
+    class Object
+    {
+    };
+
   private:
     SDL2pp::SDL sdl_;
     SDL2pp::Window window_;
