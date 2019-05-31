@@ -11,13 +11,6 @@
 #include "log.h"
 #include "texture.h"
 
-struct Vertex
-{
-    glm::vec3 pos_;
-    glm::vec2 tex_;
-    glm::vec3 norm_;
-};
-
 class Mesh
 {
   public:

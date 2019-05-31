@@ -1,6 +1,7 @@
 #version 330 core
 
-in vec2 UV;
+in vec2 uv_out;
+in vec3 diffuse_out;
 out vec3 color;
 
 uniform sampler2D sampler;
@@ -9,8 +10,8 @@ void main()
 {
 	float color_val = 1;
 
-	if (bool(int(int(UV.x * 100) % 10 < 5) ^ int(int(UV.y * 100) % 10 < 5)))
+	if (bool(int(int(uv_out.x * 100) % 10 < 5) ^ int(int(uv_out.y * 100) % 10 < 5)))
 		color_val = 0;
 
-	color = vec3(color_val, color_val, color_val);
+	color = vec3(color_val * diffuse_out.x, color_val * diffuse_out.y, color_val * diffuse_out.z);
 }

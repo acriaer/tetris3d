@@ -1,6 +1,7 @@
 
 #include "mesh.h"
 #include "exceptions.h"
+#include "visualisation.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -20,9 +21,6 @@ Mesh::MeshEntry::MeshEntry(const std::vector<Vertex> &Vertices,
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IB);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * num_indices_,
                  &Indices[0], GL_STATIC_DRAW);
-
-    float wtfs[300];
-    memcpy(wtfs, &Vertices[0], 12 * sizeof(Vertex));
 
     mat_index_ = MaterialIndex;
 };
@@ -96,9 +94,12 @@ void Mesh::InitMesh(const aiMesh *mesh)
         const aiVector3D *pTexCoord =
             mesh->HasTextureCoords(0) ? &(mesh->mTextureCoords[0][i]) : &Zero3D;
 
-        Vertex v = {glm::vec3(pPos->x, pPos->y, pPos->z),
-                    glm::vec2(pTexCoord->x, pTexCoord->y),
-                    glm::vec3(pNormal->x, pNormal->y, pNormal->z)};
+        Vertex v = {
+            glm::vec3(pPos->x, pPos->y, pPos->z),
+            glm::vec2(pTexCoord->x, pTexCoord->y),
+            glm::vec3(pNormal->x, pNormal->y, pNormal->z),
+            glm::vec3(1, 1, 0),
+        };
 
         Vertices.push_back(v);
     }
@@ -144,6 +145,7 @@ void Mesh::Render()
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(3);
 
     for (unsigned int i = 0; i < m_Entries.size(); i++)
     {
@@ -153,6 +155,8 @@ void Mesh::Render()
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                               (const GLvoid *)offsetof(Vertex, tex_));
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              (const GLvoid *)offsetof(Vertex, diffuse_));
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                               (const GLvoid *)offsetof(Vertex, norm_));
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_Entries[i].IB);

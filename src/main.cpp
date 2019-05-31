@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "config.h"
+#include "gameplay.h"
 #include "log.h"
 #include "visualisation.h"
 
@@ -33,12 +34,16 @@ int main(int argc, char **argv)
     auto block_start_time = high_resolution_clock::now();
 
     Visualisation vis;
+    Gameplay gameplay(vis);
+
     bool exit_requested = false;
     while (!exit_requested)
     {
         auto time = std::chrono::high_resolution_clock::now();
         float running_time =
-            duration_cast<std::chrono::milliseconds>(time - block_start_time).count();
+            float(duration_cast<std::chrono::milliseconds>(time - block_start_time)
+                      .count()) /
+            1000.0f;
 
         vis.Render(running_time);
 

@@ -92,16 +92,16 @@ set(SRCS_NOMAIN
   src/log.cpp
   src/config.cpp
   src/shader.cpp
-  src/mesh.cpp
   src/texture.cpp
   src/visualisation.cpp
   src/trajectory.cpp
+  src/gameplay.cpp
   
   inc/config.h
+  inc/geometry.h
   inc/exceptions.h
   inc/log.h
   inc/shader.h
-  inc/mesh.h
   inc/texture.h
   inc/visualisation.h
   )

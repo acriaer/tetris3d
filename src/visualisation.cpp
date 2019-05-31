@@ -2,6 +2,7 @@
 #include <SDL2/SDL.h>
 
 #include "config.h"
+#include "consts.h"
 #include "visualisation.h"
 
 using namespace SDL2pp;
@@ -44,8 +45,9 @@ Visualisation::Visualisation()
       main_context_(SDL_GL_CreateContext(window_.Get())),
       rx_(Config::inst().GetOption<int>("resx")),
       ry_(Config::inst().GetOption<int>("resy")), camera_pos_(0, 0, 0), fov_(65.0f),
-      camera_dist_(200.0f), camera_h_(200.0f), camera_angle_(0.0f),
-      camera_trajectory_(0.0f, 1.0f, 9, glm::half_pi<float>() / 2.0f)
+      camera_dist_(20.0f), camera_h_(20.0f), camera_angle_(0.0f),
+      target_angle_(glm::half_pi<float>() / 2.0f),
+      camera_trajectory_(0.0f, 1.0f, 0.0, target_angle_)
 {
     SDL_GL_SetSwapInterval(1);
     SDL_GL_ResetAttributes();
@@ -55,15 +57,10 @@ Visualisation::Visualisation()
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-    GLuint VertexArrayID;
-    glGenVertexArrays(1, &VertexArrayID);
-    glBindVertexArray(VertexArrayID);
-
     GLuint programID = LoadShaders("shaders/SimpleTransform.vertexshader",
                                    "shaders/SingleColor.fragmentshader");
 
     mvp_id_ = glGetUniformLocation(programID, "MVP");
-    mesh_ = Mesh("res/phoenix/phoenix_ugv.md2");
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -77,8 +74,8 @@ glm::mat4 Visualisation::UpdateCamera(float running_time)
     camera_angle_ = camera_trajectory_.GetPoint(running_time);
 
     camera_pos_.x = glm::cos(camera_angle_) * camera_dist_;
-    camera_pos_.y = camera_h_;
     camera_pos_.z = glm::sin(camera_angle_) * camera_dist_;
+    camera_pos_.y = camera_h_;
 
     return glm::lookAt(camera_pos_, lookat_h, glm::vec3(0, 1, 0));
 }
@@ -98,7 +95,10 @@ bool Visualisation::Render(float running_time)
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    mesh_->Render();
+    for (auto &obj : objects_)
+    {
+        obj->Render();
+    }
 
     // Swap buffers
     SDL_GL_SwapWindow(window_.Get());
@@ -129,12 +129,12 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
     case SDLK_DOWN:
         break;
     case SDLK_LEFT:
-        camera_trajectory_.UpdateTrajectory(running_time + 500.0f,
-                                            camera_angle_ + glm::half_pi<float>());
+        target_angle_ = target_angle_ + glm::half_pi<float>();
+        camera_trajectory_.UpdateTrajectory(running_time + 0.5f, target_angle_);
         break;
     case SDLK_RIGHT:
-        camera_trajectory_.UpdateTrajectory(running_time + 500.0f,
-                                            camera_angle_ - glm::half_pi<float>());
+        target_angle_ = target_angle_ - glm::half_pi<float>();
+        camera_trajectory_.UpdateTrajectory(running_time + 0.5f, target_angle_);
 
         break;
     case SDLK_w:
@@ -178,3 +178,105 @@ boost::optional<Visualisation::Action> Visualisation::DequeueAction()
     action_queue_.pop();
     return ret;
 }
+
+template <int W, int H>
+Visualisation::Object::Object(Geometry<W, H> &geometry, Visualisation &vis)
+    : visible_(false), pos_()
+{
+    vis.objects_.push_back(this);
+
+    std::vector<Vertex> vertices;
+    std::vector<glm::u32> indices;
+    int vertices_counter = 0;
+
+    // clang-format off
+    auto place_wall =
+        [&](float x, float y, float z, float xt, float yt, float zt, float xo1, float yo1, float zo1, float xo2, float yo2, float zo2) mutable {
+            vertices.emplace_back(glm::vec3(x + xt + xo1 - xo2, y + yt + yo1 - yo2, z + zt + zo1 - zo2), glm::vec2(1, 0), glm::vec3(xt, yt, zt), glm::vec3(1, 1, 1));
+            vertices.emplace_back(glm::vec3(x + xt - xo1 + xo2, y + yt - yo1 + yo2, z + zt - zo1 + zo2), glm::vec2(0, 1), glm::vec3(xt, yt, zt), glm::vec3(1, 1, 1));
+            vertices.emplace_back(glm::vec3(x + xt - xo1 - xo2, y + yt - yo1 - yo2, z + zt - zo1 - zo2), glm::vec2(0, 0), glm::vec3(xt, yt, zt), glm::vec3(1, 1, 1));
+            vertices.emplace_back(glm::vec3(x + xt + xo1 + xo2, y + yt + yo1 + yo2, z + zt + zo1 + zo2), glm::vec2(1, 1), glm::vec3(xt, yt, zt), glm::vec3(1, 1, 1));
+
+            indices.push_back(vertices_counter);
+            indices.push_back(vertices_counter + 1);
+            indices.push_back(vertices_counter + 2);
+            indices.push_back(vertices_counter);
+            indices.push_back(vertices_counter + 1);
+            indices.push_back(vertices_counter + 3);
+            vertices_counter += 4;
+        };
+    // clang-format on
+
+    const float U = 0.5;
+    for (int x = 0; x < W; x++)
+    {
+        for (int z = 0; z < H; z++)
+        {
+            for (int h = 0; h < geometry.heap_.size(); h++)
+            {
+                if (geometry.Element(x, z, h))
+                {
+                    if (x - 1 < 0 || !geometry.Element(x - 1, z, h))
+                        place_wall(x, h, z, -U, 0, 0, 0, U, 0, 0, 0, U);
+                    if (x + 1 == W || !geometry.Element(x + 1, z, h))
+                        place_wall(x, h, z, U, 0, 0, 0, U, 0, 0, 0, U);
+                    if (h - 1 < 0 || !geometry.Element(x, z, h - 1))
+                        place_wall(x, h, z, 0, -U, 0, U, 0, 0, 0, 0, U);
+                    if (h + 1 == geometry.heap_.size() || !geometry.Element(x, z, h + 1))
+                        place_wall(x, h, z, 0, U, 0, U, 0, 0, 0, 0, U);
+                    if (z - 1 < 0 || !geometry.Element(x, z - 1, h))
+                        place_wall(x, h, z, 0, 0, -U, U, 0, 0, 0, U, 0);
+                    if (z + 1 == H || !geometry.Element(x, z + 1, h))
+                        place_wall(x, h, z, 0, 0, U, U, 0, 0, 0, U, 0);
+                }
+            }
+        }
+    }
+
+    glGenBuffers(1, &vertex_buffer_);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), &vertices[0],
+                 GL_STATIC_DRAW);
+
+    glGenBuffers(1, &index_buffer_);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glm::u32) * indices.size(), &indices[0],
+                 GL_STATIC_DRAW);
+
+    indices_count_ = indices.size();
+}
+
+void Visualisation::Object::SetVisibility(bool v) { visible_ = v; }
+
+void Visualisation::Object::Render()
+{
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(3);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const GLvoid *)offsetof(Vertex, pos_));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const GLvoid *)offsetof(Vertex, tex_));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const GLvoid *)offsetof(Vertex, diffuse_));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const GLvoid *)offsetof(Vertex, norm_));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_);
+    glDrawElements(GL_TRIANGLES, indices_count_, GL_UNSIGNED_INT, 0);
+
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+    glDisableVertexAttribArray(3);
+}
+
+// Explicitly instantiate Object ctor to avoid stuffing this logic into header
+// file.
+template Visualisation::Object::Object(Geometry<BOARD_SIZE, BOARD_SIZE> &geometry,
+                                       Visualisation &vis);
+template Visualisation::Object::Object(Geometry<BLOCK_SIZE, BLOCK_SIZE> &geometry,
+                                       Visualisation &vis);
