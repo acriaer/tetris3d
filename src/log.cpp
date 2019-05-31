@@ -1,7 +1,7 @@
 
 #include <iostream>
-#include <spdlog/sinks/base_sink.h>
-#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include "config.h"
@@ -11,8 +11,7 @@ LoggingSingleton::LoggingSingleton()
 {
     try
     {
-        auto console_sink = std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>();
-
+        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console_sink->set_level(spdlog::level::info);
         // console_sink->set_pattern("[multi_sink_example] [%^%l%$] %v");
         sinks_.push_back(console_sink);
@@ -30,7 +29,7 @@ void LoggingSingleton::SetConsoleVerbosity(bool verbose)
 
 void LoggingSingleton::AddLogFile(std::string name)
 {
-    auto file_sink = std::make_shared<spdlog::sinks::simple_file_sink_mt>(name, true);
+    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(name, true);
 
     file_sink->set_level(spdlog::level::trace);
 
@@ -43,6 +42,7 @@ std::shared_ptr<spdlog::logger> LoggingSingleton::RegisterModule(std::string nam
     std::shared_ptr<spdlog::logger> ret =
         std::make_shared<spdlog::logger>(name, std::begin(sinks_), std::end(sinks_));
 
+    ret->flush_on(spdlog::level::warn);
     handles_.push_back(ret);
     return ret;
 }
@@ -64,7 +64,7 @@ LogStream::~LogStream()
 
 Log::Log(std::string module_name) : module_(module_name) {}
 
-std::shared_ptr<spdlog::logger> Log::GetHandle()
+std::shared_ptr<spdlog::logger> Log::GetHandle() const
 {
     auto ret = handle_.lock();
     if (!ret)
@@ -75,10 +75,10 @@ std::shared_ptr<spdlog::logger> Log::GetHandle()
     return ret;
 }
 
-LogStream Log::Debug() { return LogStream(GetHandle(), spdlog::level::debug); }
+LogStream Log::Debug() const { return LogStream(GetHandle(), spdlog::level::debug); }
 
-LogStream Log::Info() { return LogStream(GetHandle(), spdlog::level::info); }
+LogStream Log::Info() const { return LogStream(GetHandle(), spdlog::level::info); }
 
-LogStream Log::Warning() { return LogStream(GetHandle(), spdlog::level::warn); }
+LogStream Log::Warning() const { return LogStream(GetHandle(), spdlog::level::warn); }
 
-LogStream Log::Error() { return LogStream(GetHandle(), spdlog::level::err); }
+LogStream Log::Error() const { return LogStream(GetHandle(), spdlog::level::err); }
