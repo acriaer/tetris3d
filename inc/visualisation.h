@@ -30,7 +30,13 @@ class Visualisation
   public:
     enum Action
     {
-        Exit
+        Exit,
+        MoveNorth,
+        MoveSouth,
+        MoveWest,
+        MoveEast,
+        StartBoost,
+        StopBoost
     };
 
     class Object
@@ -40,6 +46,7 @@ class Visualisation
         template <int W, int H> void LoadGeometry(Geometry<W, H> &geometry);
 
         void SetVisibility(bool visible);
+        void SetColor(glm::vec3 color);
         void SetPostion(glm::vec3 position);
         void Render();
 
@@ -51,8 +58,12 @@ class Visualisation
         GLuint index_buffer_;
         GLuint indices_count_;
 
+        glm::vec3 color_;
         bool visible_;
         glm::vec3 pos_;
+        bool inited_;
+
+        friend class Visualisation;
     };
 
   private:

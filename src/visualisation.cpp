@@ -8,35 +8,6 @@
 using namespace SDL2pp;
 using std::get;
 
-const uint32_t points = 4;
-const uint32_t floatsPerPoint = 3;
-const uint32_t floatsPerColor = 4;
-
-const GLfloat diamond[points][floatsPerPoint] = {
-    {0, 1.0f, 1.0},
-    {1.0f, 1.0f, 1.0},
-    {1.0f, 0, 1.0},
-    {0, 0, 1.0},
-};
-
-const GLfloat colors[points][floatsPerColor] = {
-    {0.0, 1.0, 0.0, 1.0},
-    {1.0, 1.0, 0.0, 1.0},
-    {1.0, 0.0, 0.0, 1.0},
-    {0.0, 0.0, 1.0, 1.0},
-};
-
-glm::vec3 HTN(glm::vec4 homo_vector)
-{
-    return glm::vec3(homo_vector.x / homo_vector.w, homo_vector.y / homo_vector.w,
-                     homo_vector.z / homo_vector.w);
-}
-
-glm::vec4 NTH(glm::vec3 nonhomo_vector)
-{
-    return glm::vec4(nonhomo_vector.x, nonhomo_vector.y, nonhomo_vector.z, 1.0);
-}
-
 Visualisation::Visualisation()
     : sdl_(SDL_INIT_VIDEO),
       window_("Tetris3D", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -44,8 +15,8 @@ Visualisation::Visualisation()
               Config::inst().GetOption<int>("resy"), SDL_WINDOW_OPENGL),
       main_context_(SDL_GL_CreateContext(window_.Get())),
       rx_(Config::inst().GetOption<int>("resx")),
-      ry_(Config::inst().GetOption<int>("resy")), camera_pos_(0, 0, 0), fov_(65.0f),
-      camera_dist_(20.0f), camera_h_(20.0f), camera_angle_(0.0f),
+      ry_(Config::inst().GetOption<int>("resy")), camera_pos_(0, 0, 0), fov_(85.0f),
+      camera_dist_(20.0f), camera_h_(60.0f), camera_angle_(0.0f),
       target_angle_(glm::half_pi<float>() / 2.0f),
       camera_trajectory_(0.0f, 1.0f, 0.0, target_angle_)
 {
@@ -70,7 +41,7 @@ Visualisation::Visualisation()
 
 glm::mat4 Visualisation::UpdateCamera(float running_time)
 {
-    glm::vec3 lookat_h = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 lookat_h = glm::vec3(0.0f, 35.0f, 0.0f);
     camera_angle_ = camera_trajectory_.GetPoint(running_time);
 
     camera_pos_.x = glm::cos(camera_angle_) * camera_dist_;
@@ -85,18 +56,21 @@ bool Visualisation::Render(float running_time)
     glm::mat4 projection =
         glm::perspective(glm::radians(fov_), float(rx_) / float(ry_), 0.1f, 10000.0f);
 
-    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 0, -2.0f));
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::mat4 view = UpdateCamera(running_time);
 
-    glm::mat4 mvp = projection * view * model;
-    // Clear the screen
-    glUniformMatrix4fv(mvp_id_, 1, GL_FALSE, &mvp[0][0]);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     for (auto &obj : objects_)
     {
+        if (!obj->visible_)
+            continue;
+
+        glm::mat4 model =
+            glm::translate(glm::mat4(1.0f), obj->pos_ - glm::vec3(0, -20, 0));
+        glm::mat4 mvp = projection * view * model;
+
+        glUniformMatrix4fv(mvp_id_, 1, GL_FALSE, &mvp[0][0]);
+
         obj->Render();
     }
 
@@ -135,7 +109,6 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
     case SDLK_RIGHT:
         target_angle_ = target_angle_ - glm::half_pi<float>();
         camera_trajectory_.UpdateTrajectory(running_time + 0.5f, target_angle_);
-
         break;
     case SDLK_w:
         break;
@@ -145,9 +118,17 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
         break;
     case SDLK_d:
         break;
-    case SDLK_q:
+    case SDLK_i:
+        action_queue_.push(Action::MoveNorth);
         break;
-    case SDLK_e:
+    case SDLK_k:
+        action_queue_.push(Action::MoveSouth);
+        break;
+    case SDLK_j:
+        action_queue_.push(Action::MoveWest);
+        break;
+    case SDLK_l:
+        action_queue_.push(Action::MoveEast);
         break;
     case SDLK_KP_PLUS:
         fov_ *= 1.1f;
@@ -188,6 +169,11 @@ Visualisation::Object *Visualisation::CreateObject()
 
 template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry)
 {
+    if (inited_)
+    {
+        glDeleteBuffers(1, &vertex_buffer_);
+        glDeleteBuffers(1, &index_buffer_);
+    }
 
     std::vector<Vertex> vertices;
     std::vector<glm::u32> indices;
@@ -248,14 +234,23 @@ template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> 
                  GL_STATIC_DRAW);
 
     indices_count_ = indices.size();
+
+    inited_ = true;
 }
 
-Visualisation::Object::Object(Visualisation &vis) : vis_(vis), visible_(false), pos_() {}
+Visualisation::Object::Object(Visualisation &vis)
+    : vis_(vis), visible_(false), pos_(), inited_(false)
+{
+}
 
 void Visualisation::Object::SetVisibility(bool v) { visible_ = v; }
 
+void Visualisation::Object::SetPostion(glm::vec3 pos) { pos_ = pos; }
+
 void Visualisation::Object::Render()
 {
+    ASSERT(inited_);
+
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);

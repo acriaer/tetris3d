@@ -55,9 +55,11 @@ int main(int argc, char **argv)
                 exit_requested = true;
                 break;
             default:
-                ASSERT(0, "Action not implemented!")
+                gameplay.HandleAction(*action);
             }
         }
+
+        gameplay.Update(running_time);
     }
 
     log.Info() << "Exit requested. Bye, bye.";
