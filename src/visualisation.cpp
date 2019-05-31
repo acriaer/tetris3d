@@ -38,12 +38,14 @@ glm::vec4 NTH(glm::vec3 nonhomo_vector)
 
 Visualisation::Visualisation()
     : sdl_(SDL_INIT_VIDEO),
-      window_("lightwelter", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+      window_("Tetris3D", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
               Config::inst().GetOption<int>("resx"),
               Config::inst().GetOption<int>("resy"), SDL_WINDOW_OPENGL),
       main_context_(SDL_GL_CreateContext(window_.Get())),
       rx_(Config::inst().GetOption<int>("resx")),
-      ry_(Config::inst().GetOption<int>("resy")), camera_pos_(-10, 0, 1), fov_(65.0f)
+      ry_(Config::inst().GetOption<int>("resy")), camera_pos_(0, 0, 0), fov_(65.0f),
+      camera_dist_(200.0f), camera_h_(200.0f), camera_angle_(0.0f),
+      camera_trajectory_(0.0f, 1.0f, 9, glm::half_pi<float>() / 2.0f)
 {
     SDL_GL_SetSwapInterval(1);
     SDL_GL_ResetAttributes();
@@ -69,27 +71,26 @@ Visualisation::Visualisation()
     glUseProgram(programID);
 }
 
-glm::mat4 Visualisation::UpdateCamera()
+glm::mat4 Visualisation::UpdateCamera(float running_time)
 {
-    glm::vec4 lookat_h = glm::vec4(1.0f, 0.0f, 0.0f, 1.0);
+    glm::vec3 lookat_h = glm::vec3(0.0f, 0.0f, 0.0f);
+    camera_angle_ = camera_trajectory_.GetPoint(running_time);
 
-    glm::mat4 rot = glm::rotate(glm::mat4(1.0f), pitch_, glm::vec3(0, 0, 1));
-    rot = glm::rotate(rot, yaw_, glm::vec3(0, 1, 0));
+    camera_pos_.x = glm::cos(camera_angle_) * camera_dist_;
+    camera_pos_.y = camera_h_;
+    camera_pos_.z = glm::sin(camera_angle_) * camera_dist_;
 
-    lookat_h = rot * lookat_h;
-    camera_lookat_ = HTN(lookat_h);
-
-    return glm::lookAt(camera_pos_, camera_pos_ + camera_lookat_, glm::vec3(0, 1, 0));
+    return glm::lookAt(camera_pos_, lookat_h, glm::vec3(0, 1, 0));
 }
 
-bool Visualisation::Render()
+bool Visualisation::Render(float running_time)
 {
     glm::mat4 projection =
-        glm::perspective(glm::radians(fov_), float(rx_) / float(ry_), 0.1f, 100.0f);
+        glm::perspective(glm::radians(fov_), float(rx_) / float(ry_), 0.1f, 10000.0f);
 
     glm::mat4 model = glm::mat4(1.0f);
 
-    glm::mat4 view = UpdateCamera();
+    glm::mat4 view = UpdateCamera(running_time);
 
     glm::mat4 mvp = projection * view * model;
     // Clear the screen
@@ -108,11 +109,10 @@ bool Visualisation::Render()
         switch (event.type)
         {
         case SDL_KEYDOWN:
-            HandleKeyDown(
-                event.key); // Remember, matrix multiplication is the other way around
+            HandleKeyDown(event.key, running_time);
             break;
         case SDL_MOUSEBUTTONDOWN:
-            HandleMouseKeyDown(event.button);
+            HandleMouseKeyDown(event.button, running_time);
             break;
         }
     }
@@ -120,43 +120,34 @@ bool Visualisation::Render()
     return 0;
 }
 
-void Visualisation::HandleKeyDown(SDL_KeyboardEvent key)
+void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
 {
-    glm::vec3 camera_lookat_side = HTN(
-        glm::rotate(glm::mat4(1.0), glm::half_pi<float>(), glm::vec3(0, 1, 0)) *
-        NTH(camera_lookat_)); // Remember, matrix multiplication is the other way around
-
     switch (key.keysym.sym)
     {
     case SDLK_UP:
-        pitch_ += 0.05;
         break;
     case SDLK_DOWN:
-        pitch_ -= 0.05;
         break;
     case SDLK_LEFT:
-        yaw_ += 0.05;
+        camera_trajectory_.UpdateTrajectory(running_time + 500.0f,
+                                            camera_angle_ + glm::half_pi<float>());
         break;
     case SDLK_RIGHT:
-        yaw_ -= 0.05;
+        camera_trajectory_.UpdateTrajectory(running_time + 500.0f,
+                                            camera_angle_ - glm::half_pi<float>());
+
         break;
     case SDLK_w:
-        camera_pos_ += camera_lookat_;
         break;
     case SDLK_s:
-        camera_pos_ -= camera_lookat_;
         break;
     case SDLK_a:
-        camera_pos_ += camera_lookat_side;
         break;
     case SDLK_d:
-        camera_pos_ -= camera_lookat_side;
         break;
     case SDLK_q:
-        camera_pos_ += glm::vec3(0.0, 1.0, 0.0);
         break;
     case SDLK_e:
-        camera_pos_ += glm::vec3(0.0, -1.0, 0.0);
         break;
     case SDLK_KP_PLUS:
         fov_ *= 1.1f;
@@ -172,10 +163,10 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key)
     }
 }
 
-void Visualisation::HandleMouseKeyDown(SDL_MouseButtonEvent key)
+void Visualisation::HandleMouseKeyDown(SDL_MouseButtonEvent key, float running_time)
 {
-    if (key.button != SDL_BUTTON_LEFT)
-        return;
+    // if (key.button != SDL_BUTTON_LEFT)
+    //    return;
 }
 
 boost::optional<Visualisation::Action> Visualisation::DequeueAction()

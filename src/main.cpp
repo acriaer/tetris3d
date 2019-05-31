@@ -1,3 +1,4 @@
+#include <chrono>
 #include <stdio.h>
 
 #include "config.h"
@@ -5,11 +6,12 @@
 #include "visualisation.h"
 
 using std::string;
+using namespace std::chrono;
 
 int main(int argc, char **argv)
 {
     Log log("main");
-    log.Info() << "Ray tracer demo";
+    log.Info() << "3D tetris";
 
     Config::inst().Load(argc, argv);
 
@@ -28,11 +30,17 @@ int main(int argc, char **argv)
 
     //====================
 
+    auto block_start_time = high_resolution_clock::now();
+
     Visualisation vis;
     bool exit_requested = false;
     while (!exit_requested)
     {
-        vis.Render();
+        auto time = std::chrono::high_resolution_clock::now();
+        float running_time =
+            duration_cast<std::chrono::milliseconds>(time - block_start_time).count();
+
+        vis.Render(running_time);
 
         while (auto action = vis.DequeueAction())
         {

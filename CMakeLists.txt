@@ -95,6 +95,7 @@ set(SRCS_NOMAIN
   src/mesh.cpp
   src/texture.cpp
   src/visualisation.cpp
+  src/trajectory.cpp
   
   inc/config.h
   inc/exceptions.h
