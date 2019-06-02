@@ -33,6 +33,7 @@ class Visualisation
     enum Action
     {
         Exit,
+        // fixme: North, West, etc. names are stupid in this case
         MoveNorth,
         MoveSouth,
         MoveWest,
@@ -48,7 +49,6 @@ class Visualisation
     class Object
     {
       public:
-        Object(Visualisation &vis);
         template <int W, int H>
         void LoadGeometry(Geometry<W, H> &geometry, bool create_markers = false);
 
@@ -61,7 +61,8 @@ class Visualisation
         void Render(GLuint mode_id);
 
       private:
-        ~Object() = default; // FIXME!
+        Object(Visualisation &vis);
+        ~Object();
         Visualisation &vis_;
 
         GLuint vertex_buffer_;
@@ -101,7 +102,7 @@ class Visualisation
     Trajectory camera_trajectory_;
     Trajectory fov_trajectory_;
 
-    //
+    // we need to keep track of
     int camera_action_shift_;
 
     std::queue<Action> action_queue_;
@@ -114,9 +115,13 @@ class Visualisation
 
   public:
     Visualisation();
-    ~Visualisation() = default; // FIXME!
+    ~Visualisation();
 
-    Object *CreateObject(); // Visualisation class handles the object desctruction
+    // Request new object handle.
+    // Visualisation class handles the object desctruction
+    // it only lives as long as the Visualisation.
+    Object *CreateObject();
+
     bool Render(float running_time);
 
     Log log_{"Visualisation"};

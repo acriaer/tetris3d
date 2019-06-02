@@ -43,6 +43,13 @@ class Gameplay
     Trajectory trajectory_movement_x_;
     Trajectory trajectory_movement_z_;
 
+    float accumulated_speed_;
+    const float max_speed_;
+    const float boost_speed_;
+    const float speed_increment_;
+    const float speed_increment_peroid_;
+    const int height_;
+
     Log log_{"Gameplay"};
 
     void InitNewFallingBlock();

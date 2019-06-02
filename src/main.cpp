@@ -16,14 +16,6 @@ int main(int argc, char **argv)
 
     Config::inst().Load(argc, argv);
 
-    auto config_path = Config::inst().GetOption<std::string>("config");
-    if (config_path != "")
-    {
-        Config::inst().Load(config_path);
-    }
-
-    LoggingSingleton::inst().SetConsoleVerbosity(
-        Config::inst().GetOption<bool>("verbose"));
     LoggingSingleton::inst().AddLogFile(
         Config::inst().GetOption<std::string>("log_file"));
 

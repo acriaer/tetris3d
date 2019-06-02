@@ -1,9 +1,14 @@
 <configuration>
     <log_file type="string">log.log</log_file>
-    <config type="string"></config>
-    <verbose type="bool">true</verbose>
-    <gui type="bool">true</gui>
 
     <resx type="int">1600</resx>
     <resy type="int">1440</resy>
+    <fullscreen type="bool">false</fullscreen>
+
+    <initial_speed type="float">2.5</initial_speed>
+    <max_speed type="float">25</max_speed>
+    <boost_speed type="float">25</boost_speed>
+    <height type="int">26</height>
+    <speed_increment type="float"> 1.02 </speed_increment>
+    <speed_increment_peroid type="float"> 10 </speed_increment_peroid>
 </configuration>

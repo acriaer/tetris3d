@@ -1,3 +1,5 @@
+// fixme: this code is not entirely mine
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -28,7 +30,8 @@ GLuint LoadShaders(std::string vertex_shader_path, std::string fragment_shader_p
     std::string VertexShaderCode;
     std::ifstream VertexShaderStream(vertex_shader_path, std::ios::in);
 
-    ASSERT(VertexShaderStream.is_open(), "Impossible to open vertex shader file!");
+    ASSERT(VertexShaderStream.is_open(),
+           "Unable to open vertex shader file: " + vertex_shader_path);
 
     {
         std::stringstream sstr;
@@ -41,7 +44,8 @@ GLuint LoadShaders(std::string vertex_shader_path, std::string fragment_shader_p
     std::string FragmentShaderCode;
     std::ifstream FragmentShaderStream(fragment_shader_path, std::ios::in);
 
-    ASSERT(FragmentShaderStream.is_open(), "Impossible to open vertex shader file!");
+    ASSERT(FragmentShaderStream.is_open(),
+           "Unable to open fragment shader file: " + fragment_shader_path);
 
     {
         std::stringstream sstr;

@@ -4,7 +4,7 @@
 # ==============================================================================
 
 cmake_minimum_required(VERSION 3.0)
-project(light-welter)
+project(tetris3d)
 
 include(CTest)
 include(ExternalProject)
@@ -63,12 +63,9 @@ find_package(SDL2 REQUIRED)
 PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 find_package(OpenGL REQUIRED)                                                          
 find_package(GLEW REQUIRED)
-find_package(assimp REQUIRED)
 
 include_directories(${SDL2_INCLUDE_DIRS})
-include_directories(${ASSIMP_INCLUDE_DIRS})
 
-link_directories(${ASSIMP_LIBRARY_DIRS})
 link_directories(${GLM_LIBRARY_DIRS})
 link_directories(${CMAKE_BINARY_DIR}/dependencies/lib)
 
@@ -92,7 +89,6 @@ set(SRCS_NOMAIN
   src/log.cpp
   src/config.cpp
   src/shader.cpp
-  src/texture.cpp
   src/visualisation.cpp
   src/trajectory.cpp
   src/gameplay.cpp
@@ -102,20 +98,19 @@ set(SRCS_NOMAIN
   inc/exceptions.h
   inc/log.h
   inc/shader.h
-  inc/texture.h
   inc/visualisation.h
   )
 
 add_library (${PROJECT_NAME} STATIC ${SRCS_NOMAIN})
 
 target_link_libraries(${PROJECT_NAME}
-  ${Boost_LIBRARIES} pugixml SDL2pp resources ${SDL2IMAGE_LIBRARIES} ${SDL2_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ASSIMP_LIBRARIES} ${OPENEXR_LIBRARIES}
+  ${Boost_LIBRARIES} pugixml SDL2pp resources ${SDL2IMAGE_LIBRARIES} ${SDL2_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
 )
 
 target_link_libraries(${PROJECT_NAME} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES}) 
 
-add_executable(demo_app src/main.cpp)
-target_link_libraries(demo_app ${PROJECT_NAME})
+add_executable(tetris src/main.cpp)
+target_link_libraries(tetris ${PROJECT_NAME})
 
 add_dependencies(${PROJECT_NAME} sdl2-dependency)
 add_dependencies(${PROJECT_NAME} pugixml-dependency)

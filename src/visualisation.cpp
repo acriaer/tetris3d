@@ -8,6 +8,7 @@
 using namespace SDL2pp;
 using std::get;
 
+// see Visualisation::camera_action_shift_
 static const std::array<Visualisation::Action, 4> movement_actions = {
     Visualisation::Action::MoveWest, Visualisation::Action::MoveNorth,
     Visualisation::Action::MoveEast, Visualisation::Action::MoveSouth};
@@ -16,7 +17,10 @@ Visualisation::Visualisation()
     : sdl_(SDL_INIT_VIDEO),
       window_("Tetris3D", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
               Config::inst().GetOption<int>("resx"),
-              Config::inst().GetOption<int>("resy"), SDL_WINDOW_OPENGL),
+              Config::inst().GetOption<int>("resy"),
+              SDL_WINDOW_OPENGL | (Config::inst().GetOption<bool>("fullscreen")
+                                       ? SDL_WINDOW_FULLSCREEN_DESKTOP
+                                       : 0)),
       main_context_(SDL_GL_CreateContext(window_.Get())),
       rx_(Config::inst().GetOption<int>("resx")),
       ry_(Config::inst().GetOption<int>("resy")), camera_pos_(0, 0, 0), fov_(50.0f),
@@ -33,8 +37,7 @@ Visualisation::Visualisation()
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-    GLuint programID = LoadShaders("shaders/SimpleTransform.vertexshader",
-                                   "shaders/SingleColor.fragmentshader");
+    GLuint programID = LoadShaders("shaders/vertex.shader", "shaders/fragment.shader");
 
     vp_id_ = glGetUniformLocation(programID, "VP");
     m_id_ = glGetUniformLocation(programID, "M");
@@ -46,8 +49,16 @@ Visualisation::Visualisation()
     glUseProgram(programID);
 }
 
+Visualisation::~Visualisation()
+{
+    // fixme: ensure everything gl-related is properly freed
+    for (auto object : objects_)
+        delete object;
+}
+
 glm::mat4 Visualisation::UpdateCamera(float running_time)
 {
+    // fixme: hardcoded stuff
     glm::vec3 lookat_h = glm::vec3(0.0f, 15.0f, 0.0f);
     camera_angle_ = camera_trajectory_.GetPoint(running_time);
 
@@ -79,6 +90,7 @@ bool Visualisation::Render(float running_time)
 
         model = glm::translate(model, -glm::vec3(O, O, O));
 
+        // fixme: hardcoded stuff
         model = glm::translate(model, obj->pos_ - glm::vec3(5, 0, 5));
 
         model *= glm::mat4_cast(obj->GetOrientation(running_time));
@@ -93,7 +105,6 @@ bool Visualisation::Render(float running_time)
         obj->Render(mode_id_);
     }
 
-    // Swap buffers
     SDL_GL_SwapWindow(window_.Get());
 
     SDL_Event event;
@@ -189,11 +200,7 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
     }
 }
 
-void Visualisation::HandleMouseKeyDown(SDL_MouseButtonEvent key, float running_time)
-{
-    // if (key.button != SDL_BUTTON_LEFT)
-    //    return;
-}
+void Visualisation::HandleMouseKeyDown(SDL_MouseButtonEvent key, float running_time) {}
 
 boost::optional<Visualisation::Action> Visualisation::DequeueAction()
 {
@@ -210,6 +217,25 @@ Visualisation::Object *Visualisation::CreateObject()
     auto ret = new Object(*this);
     objects_.push_back(ret);
     return ret;
+}
+
+// ==================== OBJECT ====================
+
+Visualisation::Object::Object(Visualisation &vis)
+    : vis_(vis), visible_(false), pos_(),
+      target_rot_(glm::angleAxis(0.0f, glm::vec3(0, 1, 0))),
+      trajectory_rot_(0.0f, 0.1f, 0.0f, 1.0f)
+{
+}
+
+Visualisation::Object::~Object()
+{
+    if (inited_)
+    {
+        glDeleteBuffers(1, &vertex_buffer_);
+        glDeleteBuffers(1, &index_buffer_);
+        glDeleteBuffers(1, &markers_buffer_);
+    }
 }
 
 template <int W, int H>
@@ -230,6 +256,8 @@ void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_m
     markers_count_ = 0;
 
     // clang-format off
+
+    //fixme: explain how this works
     auto place_wall =
         [&](float x, float y, float z, float xt, float yt, float zt, float xo1, float yo1, float zo1, float xo2, float yo2, float zo2, glm::vec3 color) mutable {
             vertices.emplace_back(glm::vec3(x + xt + xo1 - xo2, y + yt + yo1 - yo2, z + zt + zo1 - zo2), glm::vec2(1, 0), glm::vec3(xt, yt, zt), color);
@@ -247,7 +275,10 @@ void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_m
         };
     // clang-format on
 
+    // one half-wall unit
+    // fixme: hardcoded stuff
     const float U = 0.5;
+
     for (int x = 0; x < W; x++)
     {
         for (int z = 0; z < H; z++)
@@ -260,8 +291,12 @@ void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_m
                 {
                     if (create_markers)
                     {
+                        // if vertex.shader is in "marker" mode, the vertex with uv=(1,1)
+                        // will be pulled to (x,0,z)
+
                         markers.emplace_back(glm::vec3(x, h, z), glm::vec2(0, 0),
                                              glm::vec3(), glm::vec3(1, 1, 1));
+
                         markers.emplace_back(glm::vec3(x, h, z), glm::vec2(1, 1),
                                              glm::vec3(), glm::vec3(1, 1, 1));
 
@@ -272,6 +307,7 @@ void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_m
                                            float((cell >> 16) & 0xff));
                     color /= 255.0f;
 
+                    // Only create the out walls
                     if (x - 1 < 0 || !geometry.Element(x - 1, z, h))
                         place_wall(x, h, z, -U, 0, 0, 0, U, 0, 0, 0, U, color);
                     if (x + 1 == W || !geometry.Element(x + 1, z, h))
@@ -307,13 +343,6 @@ void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_m
     indices_count_ = indices.size();
 
     inited_ = true;
-}
-
-Visualisation::Object::Object(Visualisation &vis)
-    : vis_(vis), visible_(false), pos_(),
-      target_rot_(glm::angleAxis(0.0f, glm::vec3(0, 1, 0))),
-      trajectory_rot_(0.0f, 0.1f, 0.0f, 1.0f)
-{
 }
 
 void Visualisation::Object::SetVisibility(bool v) { visible_ = v; }
@@ -362,6 +391,7 @@ void Visualisation::Object::Render(GLuint mode_id)
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_);
 
+    // marker mode off
     glUniform1i(mode_id, false);
 
     glDrawElements(GL_TRIANGLES, indices_count_, GL_UNSIGNED_INT, 0);
@@ -377,6 +407,7 @@ void Visualisation::Object::Render(GLuint mode_id)
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                           (const GLvoid *)offsetof(Vertex, norm_));
 
+    // marker mode on
     glUniform1i(mode_id, true);
 
     glDrawArrays(GL_LINES, 0, markers_count_ * 2);
@@ -387,7 +418,7 @@ void Visualisation::Object::Render(GLuint mode_id)
     glDisableVertexAttribArray(3);
 }
 
-// Explicitly instantiate Object ctor to avoid stuffing this logic into header
+// Explicitly instantiate LoadGeometry to avoid writing its logic in the header
 // file.
 template void
 Visualisation::Object::LoadGeometry(Geometry<BOARD_SIZE, BOARD_SIZE> &geometry,
