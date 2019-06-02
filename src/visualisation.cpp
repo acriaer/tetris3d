@@ -31,7 +31,9 @@ Visualisation::Visualisation()
     GLuint programID = LoadShaders("shaders/SimpleTransform.vertexshader",
                                    "shaders/SingleColor.fragmentshader");
 
-    mvp_id_ = glGetUniformLocation(programID, "MVP");
+    vp_id_ = glGetUniformLocation(programID, "VP");
+    m_id_ = glGetUniformLocation(programID, "M");
+    mode_id_ = glGetUniformLocation(programID, "mode");
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -76,11 +78,12 @@ bool Visualisation::Render(float running_time)
 
         model = glm::translate(model, glm::vec3(O, O, O));
 
-        glm::mat4 mvp = projection * view * model;
+        glm::mat4 vp = projection * view;
 
-        glUniformMatrix4fv(mvp_id_, 1, GL_FALSE, &mvp[0][0]);
+        glUniformMatrix4fv(vp_id_, 1, GL_FALSE, &vp[0][0]);
+        glUniformMatrix4fv(m_id_, 1, GL_FALSE, &model[0][0]);
 
-        obj->Render();
+        obj->Render(mode_id_);
     }
 
     // Swap buffers
@@ -182,17 +185,22 @@ Visualisation::Object *Visualisation::CreateObject()
     return ret;
 }
 
-template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry)
+template <int W, int H>
+void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_markers)
 {
     if (inited_)
     {
         glDeleteBuffers(1, &vertex_buffer_);
         glDeleteBuffers(1, &index_buffer_);
+        glDeleteBuffers(1, &markers_buffer_);
     }
 
     std::vector<Vertex> vertices;
+    std::vector<Vertex> markers;
     std::vector<glm::u32> indices;
+
     int vertices_counter = 0;
+    markers_count_ = 0;
 
     // clang-format off
     auto place_wall =
@@ -220,8 +228,19 @@ template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> 
             for (int h = 0; h < geometry.heap_.size(); h++)
             {
                 auto &cell = geometry.Element(x, z, h);
+
                 if (cell)
                 {
+                    if (create_markers)
+                    {
+                        markers.emplace_back(glm::vec3(x, h, z), glm::vec2(0, 0),
+                                             glm::vec3(), glm::vec3(1, 1, 1));
+                        markers.emplace_back(glm::vec3(x, h, z), glm::vec2(1, 1),
+                                             glm::vec3(), glm::vec3(1, 1, 1));
+
+                        markers_count_ += 1;
+                    }
+
                     auto color = glm::vec3(float(cell & 0xff), float((cell >> 8) & 0xff),
                                            float((cell >> 16) & 0xff));
                     color /= 255.0f;
@@ -251,6 +270,11 @@ template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> 
     glGenBuffers(1, &index_buffer_);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glm::u32) * indices.size(), &indices[0],
+                 GL_STATIC_DRAW);
+
+    glGenBuffers(1, &markers_buffer_);
+    glBindBuffer(GL_ARRAY_BUFFER, markers_buffer_);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * markers.size(), &markers[0],
                  GL_STATIC_DRAW);
 
     indices_count_ = indices.size();
@@ -289,7 +313,7 @@ glm::quat Visualisation::Object::GetOrientation(float running_time)
     return current_rot_;
 }
 
-void Visualisation::Object::Render()
+void Visualisation::Object::Render(GLuint mode_id)
 {
     ASSERT(inited_);
 
@@ -299,6 +323,7 @@ void Visualisation::Object::Render()
     glEnableVertexAttribArray(3);
 
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_);
+
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                           (const GLvoid *)offsetof(Vertex, pos_));
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
@@ -309,7 +334,25 @@ void Visualisation::Object::Render()
                           (const GLvoid *)offsetof(Vertex, norm_));
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer_);
+
+    glUniform1i(mode_id, false);
+
     glDrawElements(GL_TRIANGLES, indices_count_, GL_UNSIGNED_INT, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, markers_buffer_);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const GLvoid *)offsetof(Vertex, pos_));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const GLvoid *)offsetof(Vertex, tex_));
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const GLvoid *)offsetof(Vertex, diffuse_));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (const GLvoid *)offsetof(Vertex, norm_));
+
+    glUniform1i(mode_id, true);
+
+    glDrawArrays(GL_LINES, 0, markers_count_ * 2);
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -320,6 +363,8 @@ void Visualisation::Object::Render()
 // Explicitly instantiate Object ctor to avoid stuffing this logic into header
 // file.
 template void
-Visualisation::Object::LoadGeometry(Geometry<BOARD_SIZE, BOARD_SIZE> &geometry);
+Visualisation::Object::LoadGeometry(Geometry<BOARD_SIZE, BOARD_SIZE> &geometry,
+                                    bool create_markers);
 template void
-Visualisation::Object::LoadGeometry(Geometry<BLOCK_SIZE, BLOCK_SIZE> &geometry);
+Visualisation::Object::LoadGeometry(Geometry<BLOCK_SIZE, BLOCK_SIZE> &geometry,
+                                    bool create_markers);

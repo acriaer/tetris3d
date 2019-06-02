@@ -49,7 +49,8 @@ class Visualisation
     {
       public:
         Object(Visualisation &vis);
-        template <int W, int H> void LoadGeometry(Geometry<W, H> &geometry);
+        template <int W, int H>
+        void LoadGeometry(Geometry<W, H> &geometry, bool create_markers = false);
 
         void SetVisibility(bool visible);
         void SetColor(glm::vec3 color);
@@ -57,7 +58,7 @@ class Visualisation
         void Rotate(float angle, glm::vec3 axis, float running_time);
         void ResetRotation();
         glm::quat GetOrientation(float running_time);
-        void Render();
+        void Render(GLuint mode_id);
 
       private:
         ~Object() = default; // FIXME!
@@ -66,6 +67,8 @@ class Visualisation
         GLuint vertex_buffer_;
         GLuint index_buffer_;
         GLuint indices_count_;
+        GLuint markers_buffer_;
+        GLuint markers_count_;
 
         glm::vec3 color_;
         bool visible_;
@@ -86,7 +89,7 @@ class Visualisation
     SDL2pp::Window window_;
     SDL_GLContext main_context_;
     const uint32_t rx_, ry_;
-    GLuint mvp_id_;
+    GLuint vp_id_, m_id_, mode_id_;
 
     glm::vec3 camera_pos_;
     float fov_;

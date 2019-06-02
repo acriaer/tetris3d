@@ -65,7 +65,7 @@ Gameplay::Gameplay(Visualisation &vis)
     {
         auto geometry = ShapeToGeometry(shape);
         auto object = vis.CreateObject();
-        object->LoadGeometry(geometry);
+        object->LoadGeometry(geometry, true);
         blocks_.emplace_back(std::make_pair(geometry, object));
     }
 
@@ -95,7 +95,7 @@ void Gameplay::InitNewFallingBlock()
                                      color_distribution_(random_generator_),
                                      color_distribution_(random_generator_));
 
-    blocks_[falling_block_.type].second->LoadGeometry(falling_block_.geometry_);
+    blocks_[falling_block_.type].second->LoadGeometry(falling_block_.geometry_, true);
     blocks_[falling_block_.type].second->SetVisibility(true);
     falling_block_.target_position_x_ = BOARD_SIZE / 2 - BLOCK_SIZE / 2;
     falling_block_.target_position_z_ = BOARD_SIZE / 2 - BLOCK_SIZE / 2;
@@ -111,6 +111,8 @@ void Gameplay::InitNewFallingBlock()
 void Gameplay::HandleAction(Visualisation::Action action, float running_time)
 {
     bool target_changed = false;
+    static Geometry<BLOCK_SIZE, BLOCK_SIZE> new_geometry;
+
     switch (action)
     {
     case Visualisation::Action::MoveNorth:
@@ -150,34 +152,61 @@ void Gameplay::HandleAction(Visualisation::Action action, float running_time)
         }
         break;
     case Visualisation::Action::RotatetLeft:
-        blocks_[falling_block_.type].second->Rotate(
-            glm::half_pi<float>(), glm::vec3(0.0f, 1.0f, 0.0f), running_time);
-
-        falling_block_.geometry_ = falling_block_.geometry_.Rotate(
+        new_geometry = falling_block_.geometry_.Rotate(
             Geometry<BLOCK_SIZE, BLOCK_SIZE>::RotationDirection::Left);
+
+        if (!heap_.CheckCollision(new_geometry, falling_block_.target_position_x_,
+                                  falling_block_.target_position_z_,
+                                  falling_block_.height_))
+        {
+            falling_block_.geometry_ = new_geometry;
+            blocks_[falling_block_.type].second->Rotate(
+                glm::half_pi<float>(), glm::vec3(0.0f, 1.0f, 0.0f), running_time);
+        }
 
         break;
     case Visualisation::Action::RotatetRight:
-        blocks_[falling_block_.type].second->Rotate(
-            -glm::half_pi<float>(), glm::vec3(0.0f, 1.0f, 0.0f), running_time);
 
-        falling_block_.geometry_ = falling_block_.geometry_.Rotate(
+        new_geometry = falling_block_.geometry_.Rotate(
             Geometry<BLOCK_SIZE, BLOCK_SIZE>::RotationDirection::Right);
+
+        if (!heap_.CheckCollision(new_geometry, falling_block_.target_position_x_,
+                                  falling_block_.target_position_z_,
+                                  falling_block_.height_))
+        {
+            falling_block_.geometry_ = new_geometry;
+            blocks_[falling_block_.type].second->Rotate(
+                -glm::half_pi<float>(), glm::vec3(0.0f, 1.0f, 0.0f), running_time);
+        }
 
         break;
     case Visualisation::Action::RotateForward:
-        blocks_[falling_block_.type].second->Rotate(
-            glm::half_pi<float>(), glm::vec3(0.0f, 0.0f, 1.0f), running_time);
-
-        falling_block_.geometry_ = falling_block_.geometry_.Rotate(
+        new_geometry = falling_block_.geometry_.Rotate(
             Geometry<BLOCK_SIZE, BLOCK_SIZE>::RotationDirection::Forward);
+
+        if (!heap_.CheckCollision(new_geometry, falling_block_.target_position_x_,
+                                  falling_block_.target_position_z_,
+                                  falling_block_.height_))
+        {
+            falling_block_.geometry_ = new_geometry;
+            blocks_[falling_block_.type].second->Rotate(
+                glm::half_pi<float>(), glm::vec3(0.0f, 0.0f, 1.0f), running_time);
+        }
+
         break;
     case Visualisation::Action::RotateBackward:
-        blocks_[falling_block_.type].second->Rotate(
-            -glm::half_pi<float>(), glm::vec3(0.0f, 0.0f, 1.0f), running_time);
-
-        falling_block_.geometry_ = falling_block_.geometry_.Rotate(
+        new_geometry = falling_block_.geometry_.Rotate(
             Geometry<BLOCK_SIZE, BLOCK_SIZE>::RotationDirection::Backward);
+
+        if (!heap_.CheckCollision(new_geometry, falling_block_.target_position_x_,
+                                  falling_block_.target_position_z_,
+                                  falling_block_.height_))
+        {
+            falling_block_.geometry_ = new_geometry;
+            blocks_[falling_block_.type].second->Rotate(
+                -glm::half_pi<float>(), glm::vec3(0.0f, 0.0f, 1.0f), running_time);
+        }
+
         break;
     }
 

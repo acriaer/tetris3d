@@ -5,13 +5,21 @@ layout(location = 1) in vec2 uv;
 layout(location = 2) in vec3 diffuse;
 layout(location = 3) in vec3 normal;
 
-uniform mat4 MVP;
+uniform bool mode;
+uniform mat4 VP;
+uniform mat4 M;
 
 out vec2 uv_out;
 out vec3 diffuse_out;
 
 void main(){
-	gl_Position = MVP * vec4(pos, 1);
+	vec4 abs_pos = M * vec4(pos, 1);
+
+	if(mode && uv.x == 1 && uv.y == 1)
+		abs_pos.y = 0;
+
+	gl_Position = VP * abs_pos;
+
 	diffuse_out = diffuse;
 	uv_out = uv;
 }
