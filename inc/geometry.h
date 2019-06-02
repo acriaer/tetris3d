@@ -6,13 +6,19 @@
 template <int W, int H> class Geometry
 {
   public:
-    std::vector<std::array<uint8_t, W * H>> heap_;
+    std::vector<std::array<uint32_t, W * H>> heap_;
 
-    uint8_t &Element(int x, int z, int h) { return heap_[h][z * W + x]; }
+    uint32_t &Element(int x, int z, int h) { return heap_[h][z * W + x]; }
 
     void AddEmptyLayer() { heap_.emplace_back(); }
+    void AddFullLayer()
+    {
+        std::array<uint32_t, W * H> layer;
+        layer.fill(1);
+        heap_.push_back(layer);
+    }
 
-    void AddLayer(std::array<uint8_t, W * H> layer) { heap_.emplace_back(layer); }
+    void AddLayer(std::array<uint32_t, W * H> layer) { heap_.emplace_back(layer); }
 
     template <int OTHER_W, int OTHER_H>
     void Merge(Geometry<OTHER_W, OTHER_H> &other, int offset_x, int offset_z,
@@ -64,8 +70,6 @@ template <int W, int H> class Geometry
                             return true;
                         if (z + offset_z < 0 || z + offset_z >= H)
                             return true;
-                        if (h + offset_height < 0)
-                            return true;
 
                         if (h + offset_height >= heap_.size())
                             continue;
@@ -81,6 +85,52 @@ template <int W, int H> class Geometry
         }
 
         return false;
+    }
+
+    enum RotationDirection
+    {
+        Forward,
+        Backward,
+        Left,
+        Right
+    };
+
+    Geometry<W, H> Rotate(RotationDirection dir)
+    {
+        Geometry<W, H> ret;
+        ret.heap_.resize(heap_.size());
+        ASSERT(heap_.size() == W);
+        ASSERT(heap_.size() == H);
+
+        for (int h = 0; h < heap_.size(); h++)
+            for (int x = 0; x < W; x++)
+                for (int z = 0; z < H; z++)
+                    switch (dir)
+                    {
+                    case Left:
+                        ret.Element(z, (W - 1 - x), h) = Element(x, z, h);
+                        break;
+                    case Right:
+                        ret.Element((W - z - 1), x, h) = Element(x, z, h);
+                        break;
+                    case Forward:
+                        ret.Element((W - 1 - h), z, x) = Element(x, z, h);
+                        break;
+                    case Backward:
+                        ret.Element(h, z, (W - 1 - x)) = Element(x, z, h);
+                        break;
+                    }
+
+        return ret;
+    }
+
+    void Repaint(uint32_t r, uint32_t g, uint32_t b)
+    {
+        for (int h = 0; h < heap_.size(); h++)
+            for (int x = 0; x < W; x++)
+                for (int z = 0; z < H; z++)
+                    if (Element(x, z, h))
+                        Element(x, z, h) = r + (g << 8) + (b << 16);
     }
 
     template <int OTHER_W, int OTHER_H>

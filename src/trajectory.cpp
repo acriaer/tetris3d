@@ -10,6 +10,8 @@ Trajectory::Trajectory(float x0, float x1, float y0, float y1)
 {
 }
 
+Trajectory::Trajectory() {}
+
 float Trajectory::GetPoint(float x)
 {
     last_x_ = x;

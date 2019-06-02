@@ -7,7 +7,9 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <queue>
+#include <random>
 
 #include "geometry.h"
 #include "log.h"
@@ -35,6 +37,10 @@ class Visualisation
         MoveSouth,
         MoveWest,
         MoveEast,
+        RotateForward,
+        RotateBackward,
+        RotatetLeft,
+        RotatetRight,
         StartBoost,
         StopBoost
     };
@@ -48,6 +54,9 @@ class Visualisation
         void SetVisibility(bool visible);
         void SetColor(glm::vec3 color);
         void SetPostion(glm::vec3 position);
+        void Rotate(float angle, glm::vec3 axis, float running_time);
+        void ResetRotation();
+        glm::quat GetOrientation(float running_time);
         void Render();
 
       private:
@@ -61,6 +70,12 @@ class Visualisation
         glm::vec3 color_;
         bool visible_;
         glm::vec3 pos_;
+
+        glm::quat target_rot_;
+        glm::quat initial_rot_;
+        glm::quat current_rot_;
+        Trajectory trajectory_rot_;
+
         bool inited_;
 
         friend class Visualisation;

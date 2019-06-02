@@ -55,7 +55,7 @@ int main(int argc, char **argv)
                 exit_requested = true;
                 break;
             default:
-                gameplay.HandleAction(*action);
+                gameplay.HandleAction(*action, running_time);
             }
         }
 

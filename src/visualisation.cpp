@@ -15,8 +15,8 @@ Visualisation::Visualisation()
               Config::inst().GetOption<int>("resy"), SDL_WINDOW_OPENGL),
       main_context_(SDL_GL_CreateContext(window_.Get())),
       rx_(Config::inst().GetOption<int>("resx")),
-      ry_(Config::inst().GetOption<int>("resy")), camera_pos_(0, 0, 0), fov_(85.0f),
-      camera_dist_(20.0f), camera_h_(60.0f), camera_angle_(0.0f),
+      ry_(Config::inst().GetOption<int>("resy")), camera_pos_(0, 0, 0), fov_(50.0f),
+      camera_dist_(20.0f), camera_h_(35.0f), camera_angle_(0.0f),
       target_angle_(glm::half_pi<float>() / 2.0f),
       camera_trajectory_(0.0f, 1.0f, 0.0, target_angle_)
 {
@@ -41,7 +41,7 @@ Visualisation::Visualisation()
 
 glm::mat4 Visualisation::UpdateCamera(float running_time)
 {
-    glm::vec3 lookat_h = glm::vec3(0.0f, 35.0f, 0.0f);
+    glm::vec3 lookat_h = glm::vec3(0.0f, 15.0f, 0.0f);
     camera_angle_ = camera_trajectory_.GetPoint(running_time);
 
     camera_pos_.x = glm::cos(camera_angle_) * camera_dist_;
@@ -65,8 +65,17 @@ bool Visualisation::Render(float running_time)
         if (!obj->visible_)
             continue;
 
-        glm::mat4 model =
-            glm::translate(glm::mat4(1.0f), obj->pos_ - glm::vec3(0, -20, 0));
+        float O = -float(BLOCK_SIZE) / 2.0f + 0.5f;
+        glm::mat4 model = glm::mat4(1.0f);
+
+        model = glm::translate(model, -glm::vec3(O, O, O));
+
+        model = glm::translate(model, obj->pos_ - glm::vec3(5, 0, 5));
+
+        model *= glm::mat4_cast(obj->GetOrientation(running_time));
+
+        model = glm::translate(model, glm::vec3(O, O, O));
+
         glm::mat4 mvp = projection * view * model;
 
         glUniformMatrix4fv(mvp_id_, 1, GL_FALSE, &mvp[0][0]);
@@ -99,8 +108,10 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
     switch (key.keysym.sym)
     {
     case SDLK_UP:
+        camera_h_ += 5.0f;
         break;
     case SDLK_DOWN:
+        camera_h_ -= 5.0f;
         break;
     case SDLK_LEFT:
         target_angle_ = target_angle_ + glm::half_pi<float>();
@@ -111,12 +122,16 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
         camera_trajectory_.UpdateTrajectory(running_time + 0.5f, target_angle_);
         break;
     case SDLK_w:
+        action_queue_.push(Action::RotateForward);
         break;
     case SDLK_s:
+        action_queue_.push(Action::RotateBackward);
         break;
     case SDLK_a:
+        action_queue_.push(Action::RotatetRight);
         break;
     case SDLK_d:
+        action_queue_.push(Action::RotatetLeft);
         break;
     case SDLK_i:
         action_queue_.push(Action::MoveNorth);
@@ -181,11 +196,11 @@ template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> 
 
     // clang-format off
     auto place_wall =
-        [&](float x, float y, float z, float xt, float yt, float zt, float xo1, float yo1, float zo1, float xo2, float yo2, float zo2) mutable {
-            vertices.emplace_back(glm::vec3(x + xt + xo1 - xo2, y + yt + yo1 - yo2, z + zt + zo1 - zo2), glm::vec2(1, 0), glm::vec3(xt, yt, zt), glm::vec3(1, 1, 1));
-            vertices.emplace_back(glm::vec3(x + xt - xo1 + xo2, y + yt - yo1 + yo2, z + zt - zo1 + zo2), glm::vec2(0, 1), glm::vec3(xt, yt, zt), glm::vec3(1, 1, 1));
-            vertices.emplace_back(glm::vec3(x + xt - xo1 - xo2, y + yt - yo1 - yo2, z + zt - zo1 - zo2), glm::vec2(0, 0), glm::vec3(xt, yt, zt), glm::vec3(1, 1, 1));
-            vertices.emplace_back(glm::vec3(x + xt + xo1 + xo2, y + yt + yo1 + yo2, z + zt + zo1 + zo2), glm::vec2(1, 1), glm::vec3(xt, yt, zt), glm::vec3(1, 1, 1));
+        [&](float x, float y, float z, float xt, float yt, float zt, float xo1, float yo1, float zo1, float xo2, float yo2, float zo2, glm::vec3 color) mutable {
+            vertices.emplace_back(glm::vec3(x + xt + xo1 - xo2, y + yt + yo1 - yo2, z + zt + zo1 - zo2), glm::vec2(1, 0), glm::vec3(xt, yt, zt), color);
+            vertices.emplace_back(glm::vec3(x + xt - xo1 + xo2, y + yt - yo1 + yo2, z + zt - zo1 + zo2), glm::vec2(0, 1), glm::vec3(xt, yt, zt), color);
+            vertices.emplace_back(glm::vec3(x + xt - xo1 - xo2, y + yt - yo1 - yo2, z + zt - zo1 - zo2), glm::vec2(0, 0), glm::vec3(xt, yt, zt), color);
+            vertices.emplace_back(glm::vec3(x + xt + xo1 + xo2, y + yt + yo1 + yo2, z + zt + zo1 + zo2), glm::vec2(1, 1), glm::vec3(xt, yt, zt), color);
 
             indices.push_back(vertices_counter);
             indices.push_back(vertices_counter + 1);
@@ -204,20 +219,25 @@ template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> 
         {
             for (int h = 0; h < geometry.heap_.size(); h++)
             {
-                if (geometry.Element(x, z, h))
+                auto &cell = geometry.Element(x, z, h);
+                if (cell)
                 {
+                    auto color = glm::vec3(float(cell & 0xff), float((cell >> 8) & 0xff),
+                                           float((cell >> 16) & 0xff));
+                    color /= 255.0f;
+
                     if (x - 1 < 0 || !geometry.Element(x - 1, z, h))
-                        place_wall(x, h, z, -U, 0, 0, 0, U, 0, 0, 0, U);
+                        place_wall(x, h, z, -U, 0, 0, 0, U, 0, 0, 0, U, color);
                     if (x + 1 == W || !geometry.Element(x + 1, z, h))
-                        place_wall(x, h, z, U, 0, 0, 0, U, 0, 0, 0, U);
+                        place_wall(x, h, z, U, 0, 0, 0, U, 0, 0, 0, U, color);
                     if (h - 1 < 0 || !geometry.Element(x, z, h - 1))
-                        place_wall(x, h, z, 0, -U, 0, U, 0, 0, 0, 0, U);
+                        place_wall(x, h, z, 0, -U, 0, U, 0, 0, 0, 0, U, color);
                     if (h + 1 == geometry.heap_.size() || !geometry.Element(x, z, h + 1))
-                        place_wall(x, h, z, 0, U, 0, U, 0, 0, 0, 0, U);
+                        place_wall(x, h, z, 0, U, 0, U, 0, 0, 0, 0, U, color);
                     if (z - 1 < 0 || !geometry.Element(x, z - 1, h))
-                        place_wall(x, h, z, 0, 0, -U, U, 0, 0, 0, U, 0);
+                        place_wall(x, h, z, 0, 0, -U, U, 0, 0, 0, U, 0, color);
                     if (z + 1 == H || !geometry.Element(x, z + 1, h))
-                        place_wall(x, h, z, 0, 0, U, U, 0, 0, 0, U, 0);
+                        place_wall(x, h, z, 0, 0, U, U, 0, 0, 0, U, 0, color);
                 }
             }
         }
@@ -239,13 +259,35 @@ template <int W, int H> void Visualisation::Object::LoadGeometry(Geometry<W, H> 
 }
 
 Visualisation::Object::Object(Visualisation &vis)
-    : vis_(vis), visible_(false), pos_(), inited_(false)
+    : vis_(vis), visible_(false), pos_(),
+      target_rot_(glm::angleAxis(0.0f, glm::vec3(0, 1, 0))),
+      trajectory_rot_(0.0f, 0.1f, 0.0f, 1.0f)
 {
 }
 
 void Visualisation::Object::SetVisibility(bool v) { visible_ = v; }
 
 void Visualisation::Object::SetPostion(glm::vec3 pos) { pos_ = pos; }
+
+void Visualisation::Object::ResetRotation()
+{
+    initial_rot_ = glm::angleAxis(0.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+    target_rot_ = initial_rot_;
+}
+
+void Visualisation::Object::Rotate(float angle, glm::vec3 axis, float running_time)
+{
+    initial_rot_ = current_rot_;
+    target_rot_ = glm::angleAxis(angle, axis) * target_rot_;
+    trajectory_rot_ = Trajectory(running_time, running_time + 0.1f, 0.0f, 1.0f);
+}
+
+glm::quat Visualisation::Object::GetOrientation(float running_time)
+{
+    current_rot_ =
+        glm::slerp(initial_rot_, target_rot_, trajectory_rot_.GetPoint(running_time));
+    return current_rot_;
+}
 
 void Visualisation::Object::Render()
 {
