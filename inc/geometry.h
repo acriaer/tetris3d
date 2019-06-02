@@ -133,6 +133,18 @@ template <int W, int H> class Geometry
                         Element(x, z, h) = r + (g << 8) + (b << 16);
     }
 
+    bool CheckFullLayer(int layer)
+    {
+        for (int x = 0; x < W; x++)
+            for (int z = 0; z < H; z++)
+                if (!Element(x, z, layer))
+                    return false;
+
+        return true;
+    }
+
+    void RemoveLayer(int layer) { heap_.erase(heap_.begin() + layer); }
+
     template <int OTHER_W, int OTHER_H>
     bool Collides(const Geometry<OTHER_W, OTHER_H> &other, int offset_x, int offset_z,
                   int offset_height);

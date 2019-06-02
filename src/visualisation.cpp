@@ -8,6 +8,10 @@
 using namespace SDL2pp;
 using std::get;
 
+static const std::array<Visualisation::Action, 4> movement_actions = {
+    Visualisation::Action::MoveWest, Visualisation::Action::MoveNorth,
+    Visualisation::Action::MoveEast, Visualisation::Action::MoveSouth};
+
 Visualisation::Visualisation()
     : sdl_(SDL_INIT_VIDEO),
       window_("Tetris3D", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -17,8 +21,9 @@ Visualisation::Visualisation()
       rx_(Config::inst().GetOption<int>("resx")),
       ry_(Config::inst().GetOption<int>("resy")), camera_pos_(0, 0, 0), fov_(50.0f),
       camera_dist_(20.0f), camera_h_(35.0f), camera_angle_(0.0f),
-      target_angle_(glm::half_pi<float>() / 2.0f),
-      camera_trajectory_(0.0f, 1.0f, 0.0, target_angle_)
+      target_angle_(glm::quarter_pi<float>() / 2.0f),
+      camera_trajectory_(0.0f, 1.0f, 0.0, target_angle_),
+      fov_trajectory_(0.0f, 1.0f, fov_ * 2.0f, fov_), camera_action_shift_(0)
 {
     SDL_GL_SetSwapInterval(1);
     SDL_GL_ResetAttributes();
@@ -56,7 +61,8 @@ glm::mat4 Visualisation::UpdateCamera(float running_time)
 bool Visualisation::Render(float running_time)
 {
     glm::mat4 projection =
-        glm::perspective(glm::radians(fov_), float(rx_) / float(ry_), 0.1f, 10000.0f);
+        glm::perspective(glm::radians(fov_trajectory_.GetPoint(running_time)),
+                         float(rx_) / float(ry_), 0.1f, 10000.0f);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -67,6 +73,7 @@ bool Visualisation::Render(float running_time)
         if (!obj->visible_)
             continue;
 
+        // (O,O,O) is center of the block
         float O = -float(BLOCK_SIZE) / 2.0f + 0.5f;
         glm::mat4 model = glm::mat4(1.0f);
 
@@ -97,6 +104,9 @@ bool Visualisation::Render(float running_time)
         case SDL_KEYDOWN:
             HandleKeyDown(event.key, running_time);
             break;
+        case SDL_KEYUP:
+            HandleKeyUp(event.key, running_time);
+            break;
         case SDL_MOUSEBUTTONDOWN:
             HandleMouseKeyDown(event.button, running_time);
             break;
@@ -104,6 +114,16 @@ bool Visualisation::Render(float running_time)
     }
 
     return 0;
+}
+
+void Visualisation::HandleKeyUp(SDL_KeyboardEvent key, float running_time)
+{
+    switch (key.keysym.sym)
+    {
+    case SDLK_SPACE:
+        action_queue_.push(Action::StopBoost);
+        break;
+    }
 }
 
 void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
@@ -116,13 +136,15 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
     case SDLK_DOWN:
         camera_h_ -= 5.0f;
         break;
-    case SDLK_LEFT:
+    case SDLK_q:
         target_angle_ = target_angle_ + glm::half_pi<float>();
         camera_trajectory_.UpdateTrajectory(running_time + 0.5f, target_angle_);
+        camera_action_shift_ += 3; // -1 =_{mod4} 3
         break;
-    case SDLK_RIGHT:
+    case SDLK_e:
         target_angle_ = target_angle_ - glm::half_pi<float>();
         camera_trajectory_.UpdateTrajectory(running_time + 0.5f, target_angle_);
+        camera_action_shift_ += 1;
         break;
     case SDLK_w:
         action_queue_.push(Action::RotateForward);
@@ -137,22 +159,27 @@ void Visualisation::HandleKeyDown(SDL_KeyboardEvent key, float running_time)
         action_queue_.push(Action::RotatetLeft);
         break;
     case SDLK_i:
-        action_queue_.push(Action::MoveNorth);
+        action_queue_.push(movement_actions[camera_action_shift_ % 4]);
         break;
     case SDLK_k:
-        action_queue_.push(Action::MoveSouth);
+        action_queue_.push(movement_actions[(camera_action_shift_ + 2) % 4]);
         break;
     case SDLK_j:
-        action_queue_.push(Action::MoveWest);
+        action_queue_.push(movement_actions[(camera_action_shift_ + 1) % 4]);
         break;
     case SDLK_l:
-        action_queue_.push(Action::MoveEast);
+        action_queue_.push(movement_actions[(camera_action_shift_ + 3) % 4]);
         break;
-    case SDLK_KP_PLUS:
+    case SDLK_PERIOD:
         fov_ *= 1.1f;
+        fov_trajectory_.UpdateTrajectory(running_time + 0.4f, fov_);
         break;
-    case SDLK_KP_MINUS:
+    case SDLK_COMMA:
         fov_ *= 0.9f;
+        fov_trajectory_.UpdateTrajectory(running_time + 0.4f, fov_);
+        break;
+    case SDLK_SPACE:
+        action_queue_.push(Action::StartBoost);
         break;
     case SDLK_ESCAPE:
         action_queue_.push(Action::Exit);

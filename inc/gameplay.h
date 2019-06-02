@@ -33,6 +33,7 @@ class Gameplay
     } falling_block_;
 
     float last_time_;
+    bool boost_on_;
 
     std::random_device random_device_;
     std::mt19937 random_generator_;

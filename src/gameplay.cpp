@@ -105,7 +105,7 @@ void Gameplay::InitNewFallingBlock()
     trajectory_movement_z_ =
         Trajectory(0.0f, 1.0f, 0.0f, falling_block_.target_position_z_);
 
-    falling_block_.height_ = 25.0f;
+    falling_block_.height_ = 26.0f;
 }
 
 void Gameplay::HandleAction(Visualisation::Action action, float running_time)
@@ -206,8 +206,19 @@ void Gameplay::HandleAction(Visualisation::Action action, float running_time)
             blocks_[falling_block_.type].second->Rotate(
                 -glm::half_pi<float>(), glm::vec3(0.0f, 0.0f, 1.0f), running_time);
         }
-
         break;
+
+    case Visualisation::Action::StartBoost:
+        boost_on_ = true;
+        log_.Info() << "Boost on!";
+        break;
+    case Visualisation::Action::StopBoost:
+        boost_on_ = false;
+        log_.Info() << "Boost off!";
+        break;
+
+    default:
+        ASSERT(false);
     }
 
     if (target_changed)
@@ -224,13 +235,26 @@ void Gameplay::Update(float running_time)
     float delta_time = running_time - last_time_;
     delta_time = std::min(delta_time, 0.0166f);
 
-    falling_block_.height_ -= 3.0f * delta_time;
+    if (boost_on_)
+        falling_block_.height_ -= 25.0f * delta_time;
+    else
+        falling_block_.height_ -= 2.5f * delta_time;
 
     if (heap_.CheckCollision(falling_block_.geometry_, falling_block_.target_position_x_,
                              falling_block_.target_position_z_, falling_block_.height_))
     {
         heap_.Merge(falling_block_.geometry_, falling_block_.target_position_x_,
                     falling_block_.target_position_z_, falling_block_.height_ + 1.0f);
+
+        for (int i = std::max(3, int(falling_block_.height_ - (BLOCK_SIZE / 2 + 1)));
+             i < int(falling_block_.height_ + (BLOCK_SIZE / 2 + 1)); i++)
+        {
+            while (heap_.CheckFullLayer(i))
+            {
+                heap_.RemoveLayer(i);
+                log_.Info() << "Layer full.";
+            }
+        }
 
         heap_object_->LoadGeometry(heap_);
         InitNewFallingBlock();

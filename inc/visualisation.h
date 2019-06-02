@@ -89,18 +89,26 @@ class Visualisation
     SDL2pp::Window window_;
     SDL_GLContext main_context_;
     const uint32_t rx_, ry_;
+
+    // gl uniforms ids
     GLuint vp_id_, m_id_, mode_id_;
 
     glm::vec3 camera_pos_;
     float fov_;
     float camera_dist_, camera_h_, camera_angle_, target_angle_;
 
+    // rotation trajectory
     Trajectory camera_trajectory_;
+    Trajectory fov_trajectory_;
+
+    //
+    int camera_action_shift_;
 
     std::queue<Action> action_queue_;
     std::vector<Object *> objects_;
 
     void HandleKeyDown(SDL_KeyboardEvent key, float running_time);
+    void HandleKeyUp(SDL_KeyboardEvent key, float running_time);
     void HandleMouseKeyDown(SDL_MouseButtonEvent btn, float running_time);
     glm::mat4 UpdateCamera(float running_time);
 
