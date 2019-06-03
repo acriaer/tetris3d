@@ -283,7 +283,7 @@ void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_m
     {
         for (int z = 0; z < H; z++)
         {
-            for (unsigned int h = 0; h < geometry.heap_.size(); h++)
+            for (int h = 0; h < int(geometry.heap_.size()); h++)
             {
                 auto &cell = geometry.Element(x, z, h);
 
@@ -314,7 +314,8 @@ void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_m
                         place_wall(x, h, z, U, 0, 0, 0, U, 0, 0, 0, U, color);
                     if (h - 1 < 0 || !geometry.Element(x, z, h - 1))
                         place_wall(x, h, z, 0, -U, 0, U, 0, 0, 0, 0, U, color);
-                    if (h + 1 == geometry.heap_.size() || !geometry.Element(x, z, h + 1))
+                    if (h + 1 == int(geometry.heap_.size()) ||
+                        !geometry.Element(x, z, h + 1))
                         place_wall(x, h, z, 0, U, 0, U, 0, 0, 0, 0, U, color);
                     if (z - 1 < 0 || !geometry.Element(x, z - 1, h))
                         place_wall(x, h, z, 0, 0, -U, U, 0, 0, 0, U, 0, color);
