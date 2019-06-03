@@ -4,7 +4,7 @@
 ## Building and running (on Debian)
 
 ``` bash
-sudo apt-get install libboost-all-dev libsdl2-dev libsdl2-ttf-dev cmake libglew-dev
+sudo apt-get install libboost-all-dev libsdl2-dev libsdl2-ttf-dev cmake libglew-dev libsdl2-image-dev libsdl2-ttf-dev
 git clone https://github.com/acriaer/tetris3d.git
 cd tetris3d
 mkdir build
