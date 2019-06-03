@@ -118,7 +118,7 @@ void Gameplay::InitNewFallingBlock()
     falling_block_.height_ = height_; // fixme: rename hight_
 }
 
-void Gameplay::Update(float running_time)
+bool Gameplay::Update(float running_time)
 {
     float delta_time = running_time - last_time_;
 
@@ -141,6 +141,12 @@ void Gameplay::Update(float running_time)
     if (heap_.CheckCollision(falling_block_.geometry_, falling_block_.target_position_x_,
                              falling_block_.target_position_z_, falling_block_.height_))
     {
+        if (falling_block_.height_ + 1 >= height_ - BLOCK_SIZE / 2)
+        {
+            log_.Info() << "Game over";
+            return false;
+        }
+
         heap_.Merge(falling_block_.geometry_, falling_block_.target_position_x_,
                     falling_block_.target_position_z_, falling_block_.height_ + 1.0f);
 
@@ -163,6 +169,7 @@ void Gameplay::Update(float running_time)
                   trajectory_movement_z_.GetPoint(running_time)));
 
     last_time_ = running_time;
+    return true;
 }
 
 // fixme: too big, move this logic somewhere lese

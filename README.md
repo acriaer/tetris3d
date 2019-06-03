@@ -1,5 +1,5 @@
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/DZRnGjES52k/0.jpg)](https://youtu.be/DZRnGjES52k)
+[![Demo](https://img.youtube.com/vi/DZRnGjES52k/0.jpg)](https://youtu.be/DZRnGjES52k)
 
 ## Building and running (on Debian)
 
@@ -25,3 +25,14 @@ cd ..
  - height 
  - speed_increment
  - speed_increment_peroid
+
+ ## Controls
+
+  - W ; S -- rotate falling block vertically
+  - A ; D -- rotate falling block horizontally
+  - I ; K -- move falling block forward/backward
+  - J ; L -- move falling block left/right
+  - Q ; E -- rotate camera
+  - , ; . -- zoom in / zoom out
+  - SPACE -- boost falling
+  - ESC -- quit

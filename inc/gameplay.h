@@ -12,7 +12,10 @@ class Gameplay
 {
   public:
     Gameplay(Visualisation &vis);
-    void Update(float running_time);
+
+    // returns if the game should continue
+    bool Update(float running_time);
+
     void HandleAction(Visualisation::Action action, float running_time);
 
   private:

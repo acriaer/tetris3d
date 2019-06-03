@@ -51,7 +51,8 @@ int main(int argc, char **argv)
             }
         }
 
-        gameplay.Update(running_time);
+        if (!gameplay.Update(running_time))
+            exit_requested = true;
     }
 
     log.Info() << "Exit requested. Bye, bye.";
