@@ -58,7 +58,7 @@ ShapeToGeometry(const std::array<uint32_t, BLOCK_SIZE * BLOCK_SIZE> &shape)
 }
 
 Gameplay::Gameplay(Visualisation &vis)
-    : last_time_(0.0f), random_device_(), random_generator_(random_device_()),
+    : last_time_(0.0f), boost_on_(false), random_device_(), random_generator_(random_device_()),
       // fixme: hardcoded stuff
       color_distribution_(0x60, 0xA0), block_distribution_(0, tetris_shapes.size() - 1),
       trajectory_movement_x_(), trajectory_movement_z_(),

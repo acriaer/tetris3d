@@ -8,6 +8,7 @@ void main()
 {
 	float color_val = 1;
 
+	//draw the checker pattern everywhere
 	if (bool(int(int(uv_out.x * 4) % 2 == 0) ^ int(int(uv_out.y * 4) % 2 == 0)))
 		color_val = 0.95;
 

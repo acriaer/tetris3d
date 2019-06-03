@@ -283,7 +283,7 @@ void Visualisation::Object::LoadGeometry(Geometry<W, H> &geometry, bool create_m
     {
         for (int z = 0; z < H; z++)
         {
-            for (int h = 0; h < geometry.heap_.size(); h++)
+            for (unsigned int h = 0; h < geometry.heap_.size(); h++)
             {
                 auto &cell = geometry.Element(x, z, h);
 

@@ -1,8 +1,8 @@
 <configuration>
     <log_file type="string">log.log</log_file>
 
-    <resx type="int">1600</resx>
-    <resy type="int">1440</resy>
+    <resx type="int">1280</resx>
+    <resy type="int">1024</resy>
     <fullscreen type="bool">false</fullscreen>
 
     <initial_speed type="float">2.5</initial_speed>

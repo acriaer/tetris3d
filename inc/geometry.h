@@ -24,13 +24,11 @@ template <int W, int H> class Geometry
     void Merge(Geometry<OTHER_W, OTHER_H> &other, int offset_x, int offset_z,
                int offset_height)
     {
-        for (int h = 0; h < other.heap_.size(); h++)
+        for (unsigned int h = 0; h < other.heap_.size(); h++)
         {
-            bool layer_touched = false;
-
-            for (int x = 0; x < OTHER_W; x++)
+            for (unsigned int x = 0; x < OTHER_W; x++)
             {
-                for (int z = 0; z < OTHER_H; z++)
+                for (unsigned int z = 0; z < OTHER_H; z++)
                 {
                     if (x + offset_x < 0 || x + offset_x >= W)
                         continue;
@@ -43,12 +41,9 @@ template <int W, int H> class Geometry
                         AddEmptyLayer();
 
                     if (other.Element(x, z, h))
-                    {
                         Element(x + offset_x, z + offset_z, h + offset_height) =
                             other.Element(x, z, h);
-
-                        layer_touched = true;
-                    }
+                    
                 }
             }
         }
@@ -58,11 +53,11 @@ template <int W, int H> class Geometry
     bool CheckCollision(Geometry<OTHER_W, OTHER_H> &other, int offset_x, int offset_z,
                         int offset_height)
     {
-        for (int h = 0; h < other.heap_.size(); h++)
+        for (unsigned int h = 0; h < other.heap_.size(); h++)
         {
-            for (int x = 0; x < OTHER_W; x++)
+            for (unsigned int x = 0; x < OTHER_W; x++)
             {
-                for (int z = 0; z < OTHER_H; z++)
+                for (unsigned int z = 0; z < OTHER_H; z++)
                 {
                     if (other.Element(x, z, h))
                     {
@@ -102,9 +97,9 @@ template <int W, int H> class Geometry
         ASSERT(heap_.size() == W);
         ASSERT(heap_.size() == H);
 
-        for (int h = 0; h < heap_.size(); h++)
-            for (int x = 0; x < W; x++)
-                for (int z = 0; z < H; z++)
+        for (unsigned int h = 0; h < heap_.size(); h++)
+            for (unsigned int x = 0; x < W; x++)
+                for (unsigned int z = 0; z < H; z++)
                     switch (dir)
                     {
                     case Left:
@@ -126,17 +121,17 @@ template <int W, int H> class Geometry
 
     void Repaint(uint32_t r, uint32_t g, uint32_t b)
     {
-        for (int h = 0; h < heap_.size(); h++)
-            for (int x = 0; x < W; x++)
-                for (int z = 0; z < H; z++)
+        for (unsigned int h = 0; h < heap_.size(); h++)
+            for (unsigned int x = 0; x < W; x++)
+                for (unsigned int z = 0; z < H; z++)
                     if (Element(x, z, h))
                         Element(x, z, h) = r + (g << 8) + (b << 16);
     }
 
     bool CheckFullLayer(int layer)
     {
-        for (int x = 0; x < W; x++)
-            for (int z = 0; z < H; z++)
+        for (unsigned int x = 0; x < W; x++)
+            for (unsigned int z = 0; z < H; z++)
                 if (!Element(x, z, layer))
                     return false;
 
