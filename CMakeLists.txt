@@ -59,8 +59,7 @@ ExternalProject_Add(glm-dependency
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/dependencies -DGLM_TEST_ENABLE=OFF -DBUILD_SHARED_LIBS=OFF
 )
 
-find_package(SDL2 REQUIRED)
-PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
+PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
 find_package(OpenGL REQUIRED)                                                          
 find_package(GLEW REQUIRED)
 
