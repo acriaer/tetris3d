@@ -5,7 +5,7 @@
 
 ``` bash
 sudo apt-get install libboost-all-dev libsdl2-dev libsdl2-ttf-dev cmake
-git clone git@github.com:acriaer/tetris3d.git
+git clone https://github.com/acriaer/tetris3d.git
 cd tetris3d
 mkdir build
 cd build
